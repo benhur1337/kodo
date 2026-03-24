@@ -10,7 +10,7 @@ export default function Home() {
             <p className="py-6">
               Learn to code, the Kodo way.
             </p>
-            <Link href="/sign-in">
+            <Link href="/sign-up">
               <button className="btn btn-primary">Get Started</button>
             </Link>
           </div>
