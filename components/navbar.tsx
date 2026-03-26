@@ -37,15 +37,18 @@ export default function Navbar() {
           </Show>
         </div>
         <div>
-          <ul className="menu menu-horizontal items-center px-1 gap-4">
-            <li>
-              <Show when="signed-in">
-                <Link href="/dashboard">Dashboard</Link>
-              </Show>
-            </li>
-
+          <ul className="menu menu-horizontal items-center px-1">
             <Show when="signed-in">
-              <UserButton />
+              <li>
+                <Link href="/dashboard">Dashboard</Link>
+              </li>
+              <li>
+                <Link href="/lessons">Lessons</Link>
+              </li>
+              <li>
+                <UserButton />
+              </li>
+              
             </Show>
             <Show when="signed-out">
               <Link className="btn btn-secondary" href="/sign-in">
@@ -54,7 +57,6 @@ export default function Navbar() {
               <Link className="btn btn-primary" href="/sign-up">
                 Sign Up
               </Link>
-
             </Show>
           </ul>
         </div>

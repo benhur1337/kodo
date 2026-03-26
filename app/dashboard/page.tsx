@@ -38,25 +38,25 @@ export default function Page() {
         <div className="text-3xl font-extrabold tracking-tighter"> My Stats </div>
         <div className="divider"></div>
         <div className="grid grid-cols-2 gap-4">
-          <div className="card w-full h-full bg-success text-white bg-base-100 card-sm shadow-sm rounded-xl">
+          <div className="card w-full h-full text-white card-sm shadow-sm rounded-xl">
             <div className="card-body flex flex-col gap-0 justify-center items-center">
               <p className="text-xl font-extrabold tracking-tighter scale-110">🔥150 Days</p>
               <p className="text-xl tracking-tighter font-bold">Day Streak</p>
             </div>
           </div>
-          <div className="card w-full h-full bg-success text-white bg-base-100 card-sm shadow-sm rounded-xl">
+          <div className="card w-full h-full text-white card-sm shadow-sm rounded-xl">
             <div className="card-body flex flex-col gap-0 justify-center items-center">
               <p className="text-xl font-extrabold tracking-tighter scale-110">⚡1200 XP</p>
               <p className="text-xl tracking-tighter font-bold">Total Exp</p>
             </div>
           </div>
-          <div className="card w-full h-full bg-success text-white bg-base-100 card-sm shadow-sm rounded-xl">
+          <div className="card w-full h-full text-white card-sm shadow-sm rounded-xl">
             <div className="card-body flex flex-col gap-0 justify-center items-center">
               <p className="text-xl font-extrabold tracking-tighter scale-110">📔 100</p>
               <p className="text-xl tracking-tighter font-bold">Total Lessons</p>
             </div>
           </div>
-          <div className="card w-full h-full bg-success text-white bg-base-100 card-sm shadow-sm rounded-xl">
+          <div className="card w-full h-full text-white card-sm shadow-sm rounded-xl">
             <div className="card-body flex flex-col gap-0 justify-center items-center">
               <p className="text-xl font-extrabold tracking-tighter scale-110">🚀5</p>
               <p className="text-xl tracking-tighter font-bold">Skill Points</p>
