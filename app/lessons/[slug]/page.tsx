@@ -31,8 +31,6 @@ export default async function Page({
 }) {
   const { slug } = await params;
   const data = await fetchLessonCategory(slug);
-  
-  console.log(data)
 
   if (!data){
     return (
@@ -44,9 +42,8 @@ export default async function Page({
   }
     
   return (
-    <div className="flex flex-col items-center gap-4 p-6">
-      
-
+    <div className="flex flex-col gap-4 p-6">
+    
       <LessonClient data={data as Category}/>
     </div>
   );

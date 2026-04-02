@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { python } from "@codemirror/lang-python";
+import { PythonProvider, usePython } from "react-py";
+import CodeMirror from "@uiw/react-codemirror";
 
-type LessonStep = 
-    | { type: 'explanation'; text:string }
-    | { type: 'quiz'; question: string; options: string[] }
+type LessonStep =
+  | { type: "explanation"; text: string }
+  | { type: "quiz"; question: string; options: string[] }
+  | { type: "coding"; initialCode: string; expectedOutput: string };
 
 interface Lesson {
   id: string;
@@ -25,7 +29,7 @@ interface Category {
 
 export default function LessonClient({ data }: { data: Category }) {
   const [currentIndex, setCurrentIndex] = useState(0);
- 
+  console.log(data);
 
   if (currentIndex == 0) {
     return (
@@ -40,7 +44,12 @@ export default function LessonClient({ data }: { data: Category }) {
         <ul className="steps steps-vertical">
           {data.lessons.map((item) => (
             <li className="step step-primary" key={item.id}>
-              <button onClick={() => setCurrentIndex(item.order)} className="btn btn-soft btn-accent">{item.title}</button>
+              <button
+                onClick={() => setCurrentIndex(item.order)}
+                className="btn btn-soft btn-accent"
+              >
+                {item.title}
+              </button>
             </li>
           ))}
         </ul>
@@ -48,49 +57,168 @@ export default function LessonClient({ data }: { data: Category }) {
     );
   }
 
-  return(
+  return (
     <div className="flex flex-col gap-4 items-center">
-        <h1 className="text-5xl font-extrabold tracking-tighter text-center"><span className="text-xl font-semibold tracking-normal">Lesson {currentIndex} :</span><br/>{data.lessons[currentIndex - 1].title}</h1>
-        <div>
-            <LessonStep lessonContent={data.lessons[currentIndex - 1].content}/>
-        </div>
-        <button onClick={() => setCurrentIndex(0)} className="btn btn-primary">Back to Course Menu</button>
+      <h1 className="text-5xl font-extrabold tracking-tighter text-center">
+        <span className="text-xl font-semibold tracking-normal">
+          Lesson {currentIndex} :
+        </span>
+        <br />
+        {data.lessons[currentIndex - 1].title}
+      </h1>
+      <div>
+        <LessonStep
+          category={data.name.toLowerCase()}
+          lessonContent={data.lessons[currentIndex - 1].content}
+        />
+      </div>
+      <button onClick={() => setCurrentIndex(0)} className="btn btn-primary">
+        Back to Course Menu
+      </button>
     </div>
-  )
+  );
 }
 
-function LessonStep({ lessonContent } : { lessonContent:LessonStep[]}){
-    const [lessonIndex, setLessonIndex] = useState(0)
+function LessonStep({
+  lessonContent,
+  category,
+}: {
+  lessonContent: LessonStep[];
+  category: string;
+}) {
+  useEffect(() => {
+    async function init() {
+      // @ts-expect-error to load pyodide
+      const pyodide = await window.loadPyodide();
 
-    function increaseLessonIndex(){
-        if(lessonIndex < (lessonContent.length - 1)){
-            setLessonIndex(lessonIndex + 1)
-        } else {
-            setLessonIndex(0)
-        }
+      await pyodide.loadPackage("pyodide-http");
+      console.log("Pyodide is ready.");
     }
+  }, []);
 
-    if(lessonContent[lessonIndex].type == "explanation"){
-        return(
-            <div className="card h-full w-full flex flex-col gap-4 justify-center items-center bg-gray-600 text-xl font-bold p-6">
-                <p>{lessonContent[lessonIndex].text}</p>
-                <button onClick={increaseLessonIndex} className="btn btn-xs btn-success text-white">Next</button>
-            </div>
-        )
-    }
+  const [lessonIndex, setLessonIndex] = useState(0);
 
-    if(lessonContent[lessonIndex].type == "quiz"){
-        return(
-            <div className="flex flex-col justify-center items-center gap-4">
-                <p>{lessonContent[lessonIndex].question}</p>
-                <div className="flex flex-row gap-4">
-                    {
-                        lessonContent[lessonIndex].options.map((item) => <button className="btn btn-soft btn-accent" key={item}>{item}</button>)
-                    }
-                </div>
-                <button onClick={increaseLessonIndex} className="btn btn-xs btn-success text-white">Next</button>
-            </div>
-        )
+  function increaseLessonIndex() {
+    if (lessonIndex < lessonContent.length - 1) {
+      setLessonIndex(lessonIndex + 1);
+    } else {
+      setLessonIndex(0);
     }
-    
+  }
+
+  if (lessonContent[lessonIndex].type == "explanation") {
+    return (
+      <div className="card h-full w-full flex flex-col gap-4 justify-center items-center bg-gray-600 text-xl font-bold p-6">
+        <p>{lessonContent[lessonIndex].text}</p>
+        <button
+          onClick={increaseLessonIndex}
+          className="btn btn-xs btn-success text-white"
+        >
+          Next
+        </button>
+      </div>
+    );
+  }
+
+  if (lessonContent[lessonIndex].type == "quiz") {
+    return (
+      <div className="flex flex-col justify-between items-center gap-4">
+        <p>{lessonContent[lessonIndex].question}</p>
+        <div className="flex flex-row gap-4">
+          {lessonContent[lessonIndex].options.map((item) => (
+            <button className="btn btn-soft btn-accent" key={item}>
+              {item}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={increaseLessonIndex}
+          className="btn btn-xs btn-success text-white"
+        >
+          Next
+        </button>
+      </div>
+    );
+  }
+
+  if (lessonContent[lessonIndex].type == "coding") {
+    return (
+      <div>
+        <CodeBlock
+          type={category}
+          initialCode={lessonContent[lessonIndex].initialCode}
+          expectedOutput={lessonContent[lessonIndex].expectedOutput}
+        />
+      </div>
+    );
+  }
+}
+
+function CodeBlock({
+  type,
+  initialCode,
+  expectedOutput,
+}: {
+  type: string;
+  initialCode: string;
+  expectedOutput: string;
+}) {
+  const [code, setCode] = useState(initialCode);
+  const [codeResult, setCodeResult] = useState("");
+  const { runPython, stdout, stderr, isLoading, isRunning } = usePython();
+
+  const onChange = useCallback((val: string) => {
+    setCode(val);
+  }, []);
+
+  function handleRun() {
+    runPython(code);
+  }
+
+  function checkAnswer() {
+    if (stdout == expectedOutput) {
+      setCodeResult("Answer is correct!");
+    } else {
+      setCodeResult("Incorrect. Try again.");
+    }
+  }
+
+  if (type == "python") {
+    return (
+      <PythonProvider>
+        <div className="flex flex-col gap-4">
+          <div className="border-4 border-primary rounded-lg">
+            <CodeMirror
+              value={code}
+              theme="dark"
+              onChange={onChange}
+              extensions={[python()]}
+              basicSetup={{
+                lineNumbers: true,
+                foldGutter: true,
+                dropCursor: true,
+                allowMultipleSelections: true,
+                indentOnInput: true,
+              }}
+              height="250px"
+              width="300px"
+              className="rounded-lg"
+            />
+          </div>
+
+          <button
+            className={`btn btn-primary ${isRunning ? "loading" : ""}`}
+            onClick={handleRun}
+            disabled={isLoading}
+          >
+            {isRunning ? "Loading" : "Run Code"}
+          </button>
+          <div className="p-4 bg-black min-h-20 h-auto max-w-75 rounded-lg">
+            <p className="text-gray-400">Output:</p>
+            <p className="whitespace-pre">{stdout || stderr}</p>
+          </div>
+        </div>
+      </PythonProvider>
+    );
+  }
 }
