@@ -16,14 +16,14 @@ export const users = pgTable("users", {
 
 
 export const userProgress = pgTable("user_progress", {
-    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    lessonId: uuid("lesson_id").notNull().references(() => lessons.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull().references(() => users.clerkId),
+    categoryId: uuid("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
     isCompleted: boolean("is_completed").default(false),
     currentStepIndex: integer("current_step_index").default(0),
     updatedAt: timestamp("updated_at").defaultNow()
 }, (table) => ({
-    pk: primaryKey({ columns: [table.userId, table.lessonId]})
-}))
+    pk: primaryKey({columns: [table.userId, table.categoryId]})
+}));
 
 
 /*
@@ -70,10 +70,10 @@ export const lessonsRelations = relations(lessons, ({one}) => ({
 export const userProgressRelations = relations(userProgress, ({ one }) => ({
     user: one(users, {
         fields: [userProgress.userId],
-        references: [users.id]
+        references: [users.clerkId], 
     }),
-    lesson: one( lessons, {
-        fields: [userProgress.lessonId],
-        references: [lessons.id]
+    category: one(categories, { 
+        fields: [userProgress.categoryId],
+        references: [categories.id]
     })
-}))
+}));

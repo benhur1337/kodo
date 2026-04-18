@@ -1,153 +1,153 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useUser } from "@clerk/nextjs";
+import { useState, useCallback } from "react";
+import { Category } from "@/src/types";
+
 import { python } from "@codemirror/lang-python";
 import { PythonProvider, usePython } from "react-py";
+
 import CodeMirror from "@uiw/react-codemirror";
 
-type LessonStep =
-  | { type: "explanation"; text: string }
-  | { type: "quiz"; question: string; options: string[] }
-  | { type: "coding"; initialCode: string; expectedOutput: string };
-
-interface Lesson {
-  id: string;
-  categoryId: string | null;
-  title: string;
-  order: number;
-  content: LessonStep[];
-  initialCode: string | null;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  description: string | null;
-  icon: string | null;
-  lessons: Lesson[];
-}
+import { saveUserProgress } from "@/src/lib/data";
 
 export default function LessonClient({ data }: { data: Category }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  console.log(data);
+  const lessonId = data.id
+  const lessons = data.lessons;
+  const totalLessons = lessons.length;
+  const { user } = useUser();
 
-  if (currentIndex == 0) {
+  const [inLesson, setInLesson] = useState(false);
+  const [lessonIndex, setLessonIndex] = useState(0);
+  const [lessonSlide, setLessonSlide] = useState(0);
+
+  function nextSlide() {
+    const isLastSlide = lessonSlide === data.lessons[lessonIndex].content.length - 1;
+
+    if (isLastSlide) {
+      if (user) {
+        const isLastLesson = lessonIndex + 1 === totalLessons;
+        saveUserProgress(user.id, lessonId, lessonIndex + 1, isLastLesson);
+      }
+      exitLesson();
+    } else {
+      setLessonSlide((prev) => prev + 1);
+    }
+  }
+
+  function enterLesson(lessonOrder: number) {
+    setLessonIndex(lessonOrder);
+    setLessonSlide(0);
+    setInLesson(true);
+  }
+
+  function exitLesson() {
+    setLessonIndex(0);
+    setLessonSlide(0);
+    setInLesson(false);
+  }
+
+  if (inLesson) {
     return (
-      <div className="flex flex-col items-center gap-4">
-        <div className="flex flex-col text-center gap-4">
-          <h1 className="text-5xl font-extrabold tracking-tighter">
-            {" "}
-            Welcome to {data.name}
-          </h1>
-          <p className="text-md">{data.description}</p>
+      <div className="flex flex-col gap-4 p-6">
+        <Slide
+          lessonNumber={lessonIndex}
+          lessonSlide={lessonSlide}
+          data={data}
+        />
+        <div className="flex flex-row gap-4">
+          <button onClick={nextSlide} className="btn btn-success text-white">
+            Next
+          </button>
+          <button onClick={exitLesson} className="btn btn-primary">
+            Lesson Chapters
+          </button>
         </div>
-        <ul className="steps steps-vertical">
-          {data.lessons.map((item) => (
-            <li className="step step-primary" key={item.id}>
-              <button
-                onClick={() => setCurrentIndex(item.order)}
-                className="btn btn-soft btn-accent"
-              >
-                {item.title}
-              </button>
-            </li>
-          ))}
-        </ul>
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4 items-center">
-      <h1 className="text-5xl font-extrabold tracking-tighter text-center">
-        <span className="text-xl font-semibold tracking-normal">
-          Lesson {currentIndex} :
-        </span>
-        <br />
-        {data.lessons[currentIndex - 1].title}
-      </h1>
-      <div>
-        <LessonStep
-          category={data.name.toLowerCase()}
-          lessonContent={data.lessons[currentIndex - 1].content}
-        />
+  if (!inLesson) {
+    return (
+      <div className="flex flex-col gap-4 p-6">
+        <div className="flex flex-col gap-4">
+          {lessons.map((lesson) => (
+            <button
+              onClick={() => enterLesson(lesson.order - 1)}
+              className="btn btn-secondary"
+              key={lesson.order}
+            >
+              {lesson.title}
+            </button>
+          ))}
+        </div>
       </div>
-      <button onClick={() => setCurrentIndex(0)} className="btn btn-primary">
-        Back to Course Menu
-      </button>
-    </div>
-  );
+    );
+  }
 }
 
-function LessonStep({
-  lessonContent,
-  category,
+function Slide({
+  lessonNumber,
+  lessonSlide,
+  data,
 }: {
-  lessonContent: LessonStep[];
-  category: string;
+  lessonNumber: number;
+  lessonSlide: number;
+  data: Category;
 }) {
-  useEffect(() => {
-    async function init() {
-      // @ts-expect-error to load pyodide
-      const pyodide = await window.loadPyodide();
+  const content = data.lessons[lessonNumber].content[lessonSlide];
+  const [checkQuiz, setCheckQuiz] = useState("");
+  const [quizTip, setQuizTip] = useState("font-bold text-xl text-success");
 
-      await pyodide.loadPackage("pyodide-http");
-      console.log("Pyodide is ready.");
-    }
-  }, []);
-
-  const [lessonIndex, setLessonIndex] = useState(0);
-
-  function increaseLessonIndex() {
-    if (lessonIndex < lessonContent.length - 1) {
-      setLessonIndex(lessonIndex + 1);
-    } else {
-      setLessonIndex(0);
+  function checkAnswer(item: string) {
+    if (content.type === "quiz") {
+      if (content.answer == item) {
+        setCheckQuiz("Answer is Correct!");
+        setQuizTip("font-bold text-xl text-success");
+      } else {
+        setCheckQuiz("Incorrect. Please try again.");
+        setQuizTip("font-bold text-xl text-error");
+      }
     }
   }
 
-  if (lessonContent[lessonIndex].type == "explanation") {
+  if (content.type === "explanation") {
     return (
-      <div className="card h-full w-full flex flex-col gap-4 justify-center items-center bg-gray-600 text-xl font-bold p-6">
-        <p>{lessonContent[lessonIndex].text}</p>
-        <button
-          onClick={increaseLessonIndex}
-          className="btn btn-xs btn-success text-white"
-        >
-          Next
-        </button>
+      <div className="text-2xl font-extrabold tracking-tighter">
+        {content.text}
       </div>
     );
   }
 
-  if (lessonContent[lessonIndex].type == "quiz") {
+  if (content.type === "quiz") {
     return (
-      <div className="flex flex-col justify-between items-center gap-4">
-        <p>{lessonContent[lessonIndex].question}</p>
+      <div className="flex flex-col gap-4">
+        <p className="text-2xl font-extrabold tracking-tighter">
+          {content.question}
+        </p>
         <div className="flex flex-row gap-4">
-          {lessonContent[lessonIndex].options.map((item) => (
-            <button className="btn btn-soft btn-accent" key={item}>
+          {content.options.map((item) => (
+            <button
+              onClick={() => checkAnswer(item)}
+              className="btn btn-soft btn-success text-xl"
+              key={item}
+            >
               {item}
             </button>
           ))}
         </div>
-        <button
-          onClick={increaseLessonIndex}
-          className="btn btn-xs btn-success text-white"
-        >
-          Next
-        </button>
+        <p className={quizTip}>{checkQuiz}</p>
       </div>
     );
   }
 
-  if (lessonContent[lessonIndex].type == "coding") {
+  if (content.type === "coding") {
     return (
       <div>
         <CodeBlock
-          type={category}
-          initialCode={lessonContent[lessonIndex].initialCode}
-          expectedOutput={lessonContent[lessonIndex].expectedOutput}
+          type={data.name.toLowerCase()}
+          initialCode={content.initialCode}
+          expectedOutput={content.expectedOutput}
         />
       </div>
     );
@@ -173,6 +173,9 @@ function CodeBlock({
 
   function handleRun() {
     runPython(code);
+    if (stdout == expectedOutput) {
+      console.log("Great!");
+    }
   }
 
   function checkAnswer() {
@@ -185,40 +188,38 @@ function CodeBlock({
 
   if (type == "python") {
     return (
-      <PythonProvider>
-        <div className="flex flex-col gap-4">
-          <div className="border-4 border-primary rounded-lg">
-            <CodeMirror
-              value={code}
-              theme="dark"
-              onChange={onChange}
-              extensions={[python()]}
-              basicSetup={{
-                lineNumbers: true,
-                foldGutter: true,
-                dropCursor: true,
-                allowMultipleSelections: true,
-                indentOnInput: true,
-              }}
-              height="250px"
-              width="300px"
-              className="rounded-lg"
-            />
-          </div>
-
-          <button
-            className={`btn btn-primary ${isRunning ? "loading" : ""}`}
-            onClick={handleRun}
-            disabled={isLoading}
-          >
-            {isRunning ? "Loading" : "Run Code"}
-          </button>
-          <div className="p-4 bg-black min-h-20 h-auto max-w-75 rounded-lg">
-            <p className="text-gray-400">Output:</p>
-            <p className="whitespace-pre">{stdout || stderr}</p>
-          </div>
+      <div className="flex flex-col md:flex-row">
+        <div className="w-full h-125 bg-primary">
+          <CodeMirror
+            value={code}
+            theme="dark"
+            onChange={onChange}
+            extensions={[python()]}
+            basicSetup={{
+              foldGutter: true,
+              dropCursor: true,
+              allowMultipleSelections: true,
+              indentOnInput: true,
+            }}
+            height="500px"
+          />
         </div>
-      </PythonProvider>
+        <PythonProvider packages={{ official: ["pyodide-http"] }}>
+          <div className="w-full h-auto flex flex-col">
+            <div className="p-4 h-full min-h-20 bg-black">
+              <p className="text-gray-400">Output:</p>
+              <p className="whitespace-pre">{stdout || stderr}</p>
+            </div>
+            <button
+              className={`btn btn-primary rounded-none ${isRunning ? "loading" : ""}`}
+              onClick={handleRun}
+              disabled={isLoading}
+            >
+              {isRunning ? "Loading" : "Run Code"}
+            </button>
+          </div>
+        </PythonProvider>
+      </div>
     );
   }
 }

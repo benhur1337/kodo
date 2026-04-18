@@ -51,7 +51,7 @@ export default function Navbar() {
               
             </Show>
             <Show when="signed-out">
-              <Link className="btn btn-secondary" href="/sign-in">
+              <Link className="btn btn-secondary mx-4" href="/sign-in">
                 Sign In
               </Link>
               <Link className="btn btn-primary" href="/sign-up">

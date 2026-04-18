@@ -1,107 +1,51 @@
-"use client";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { db } from "@/src/index";
 
-import { useUser } from "@clerk/nextjs";
+import { users } from "@/src/db/schema";
+import { eq } from "drizzle-orm";
 
-export default function Page() {
-  const { isLoaded, user } = useUser();
+export default async function Page() {
+  const { userId: clerkId } = await auth();
+  const user = await currentUser();
 
-  if (!isLoaded) {
-    return (
-      <div className="flex flex-row gap-4 p-6">
-        <span className="loading loading-spinner text-primary"></span>
-        <span className="skeleton skeleton-text">Loading Profile...</span>
-      </div>
-    );
-  }
+  if (!clerkId || !user) return null;
+
+  const [dbUser] = await db
+    .insert(users)
+    .values({
+      clerkId: clerkId,
+      xp: 0,
+      streak: 0,
+    })
+    .onConflictDoUpdate({
+      target: users.clerkId,
+      set: { updatedAt: new Date() },
+    })
+    .returning();
 
   return (
-    <div>
-      <div className="flex flex-row gap-4 text-5xl font-extrabold tracking-tighter px-6 pt-6">
-        <div className="avatar">
-          <div className="w-24 rounded-full">
-            <img
-              src={user?.imageUrl}
-              height={100}
-              width={100}
-              alt="kodo user profile pic"
-            />
-          </div>
+    <div className="flex flex-col gap-4 p-6">
+      <header>
+        <h1 className="text-3xl font-bold text-white">
+          Welcome, {user.fullName}!
+        </h1>
+        <p className="text-gray-400">Ready to continue your Kodo journey?</p>
+      </header>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+          <p className="text-sm text-gray-400 uppercase tracking-wider">
+            Total XP
+          </p>
+          <p className="text-4xl font-black text-blue-500">{dbUser.xp}</p>
         </div>
-        <span>
-          Welcome <br /> {user?.firstName}, {user?.lastName}
-        </span>
-      </div>
-      <br />
 
-      {/* User Stats */}
-      <div className="px-6">
-        <div className="text-3xl font-extrabold tracking-tighter"> My Stats </div>
-        <div className="divider"></div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="card w-full h-full text-white card-sm shadow-sm rounded-xl">
-            <div className="card-body flex flex-col gap-0 justify-center items-center">
-              <p className="text-xl font-extrabold tracking-tighter scale-110">🔥150 Days</p>
-              <p className="text-xl tracking-tighter font-bold">Day Streak</p>
-            </div>
-          </div>
-          <div className="card w-full h-full text-white card-sm shadow-sm rounded-xl">
-            <div className="card-body flex flex-col gap-0 justify-center items-center">
-              <p className="text-xl font-extrabold tracking-tighter scale-110">⚡1200 XP</p>
-              <p className="text-xl tracking-tighter font-bold">Total Exp</p>
-            </div>
-          </div>
-          <div className="card w-full h-full text-white card-sm shadow-sm rounded-xl">
-            <div className="card-body flex flex-col gap-0 justify-center items-center">
-              <p className="text-xl font-extrabold tracking-tighter scale-110">📔 100</p>
-              <p className="text-xl tracking-tighter font-bold">Total Lessons</p>
-            </div>
-          </div>
-          <div className="card w-full h-full text-white card-sm shadow-sm rounded-xl">
-            <div className="card-body flex flex-col gap-0 justify-center items-center">
-              <p className="text-xl font-extrabold tracking-tighter scale-110">🚀5</p>
-              <p className="text-xl tracking-tighter font-bold">Skill Points</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <br />
-
-      {/* Lesson Progress */}
-      <div className="px-6">
-        <div className="text-3xl font-extrabold tracking-tighter">
-          {" "}
-          Lesson Progress{" "}
-        </div>
-        <div className="divider"></div>
-      </div>
-      <div className="flex flex-row overflow-x-scroll">
-        {
-          [1,2,3,4,5,6,7,8,9,10].map((key) => (
-            <CourseCard key={key}/>
-          ))
-        }
-        <CourseCard/>
-      </div>
-    </div>
-  );
-}
-
-function CourseCard() {
-  return (
-    <div className="card mx-4 min-w-45 bg-primary text-white bg-base-100 card-md shadow-sm rounded-xl">
-      <div className="card-body flex flex-col gap-4 justify-center items-center">
-        <div
-          className="radial-progress text-white"
-          style={{ "--value": 70 } as React.CSSProperties}
-          aria-valuenow={70}
-          role="progressbar"
-        >
-          70%
-        </div>
-        <h2 className="card-title text-center">Sample Course</h2>
-        <div className="justify-end card-actions">
-          <button className="btn btn-secondary">Continue Lesson</button>
+        <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+          <p className="text-sm text-gray-400 uppercase tracking-wider">
+            Day Streak
+          </p>
+          <p className="text-4xl font-black text-orange-500">
+            🔥 {dbUser.streak}
+          </p>
         </div>
       </div>
     </div>

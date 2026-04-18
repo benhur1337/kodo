@@ -1,52 +1,48 @@
+import { auth } from "@clerk/nextjs/server";
+
+import { fetchLessons, fetchUserProgress } from "@/src/lib/data";
 import Link from "next/link";
-import { fetchLessons } from "@/src/lib/data";
-
-
 
 export default async function Page() {
+  const { userId } = await auth()
 
   const lessons = await fetchLessons();
+  const userProgress = await fetchUserProgress(userId as string);
 
-  console.log(lessons)
+    
 
-  return (
-    <div>
-      <div className="p-6">
-        <div className="text-5xl font-extrabold tracking-tighter">
-          {" "}
-          Lessons
-          {" "}
-        </div>
-        <div className="divider"></div>
-      </div>
-      <div className="flex flex-row overflow-x-scroll">
-        {
-          lessons.map((item) => <CourseCard key={item.id} title={item.name}/>)
-        }
-      </div>
-    </div>
-  );
+function findUserProg(lessonId:string){
+    
+   const data = userProgress.find((prog:any) => prog.categoryId == lessonId)
+
+   
+    
+
+   return data
 }
 
-function CourseCard({ title } : { title:string }) {
-  return (
-    <div className="card mx-4 min-w-45 text-white bg-primary card-md shadow-sm rounded-xl">
-      <div className="card-body flex flex-col gap-4 justify-center items-center">
-        <div
-          className="radial-progress text-white"
-          style={{ "--value": 70 } as React.CSSProperties}
-          aria-valuenow={70}
-          role="progressbar"
-        >
-          70%
-        </div>
-        <h2 className="card-title text-center">{ title }</h2>
-        <div className="justify-end card-actions">
-          <Link href={"./lessons/" + title.toLowerCase()}>
-            <button className="btn btn-secondary">Continue</button>
-          </Link>
-        </div>
+console.log(findUserProg("51aeea6e-a74d-4e07-ba2b-2d7253d1e0c1"))
+
+  if (userId) {
+    return (
+      <div className="p-6">
+        {lessons.map((lesson) => (
+          <div key={lesson.id}>
+            <p>progress: 
+
+            </p>
+            <h1 className="text-2xl font-extrabold tracking-tighter">
+              {lesson.name}
+            </h1>
+            <Link
+              href={"/lessons/" + lesson.name.toLowerCase()}
+              className="btn btn-primary"
+            >
+              Learn
+            </Link>
+          </div>
+        ))}
       </div>
-    </div>
-  );
+    );
+  }
 }

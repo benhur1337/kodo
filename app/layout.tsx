@@ -32,12 +32,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ClerkProvider>
           <Navbar/>
+          
           <div className="mt-[75.57px]">
             {children}
-          </div>
-
-          <div>
-            <button></button>
           </div>
 
           <div className="text-center p-6">
